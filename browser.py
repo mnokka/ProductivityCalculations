@@ -1,27 +1,46 @@
+
+
 import pandas as pd
-
-money = pd.read_excel("money.xlsx", sheet_name="Sheet 1",header=9) # rivit 0-9 pois , rivi 10 alkaen
-money = money.loc[:, ~money.columns.str.contains('Unnamed')] # remove "unnanamed" after the year 
-
-workers = pd.read_excel("workers.xlsx", sheet_name="Sheet 1", header=9)
-workers = workers.loc[:, ~workers.columns.str.contains('Unnamed')] 
+import os,sys
 
 
-def delimiter():
-    print("-" * 40)
+money_file = "money.xlsx"
+workers_file = "workers.xlsx"
+
+# Tarkistus molemmille tiedostoille
+for f in [money_file, workers_file]:
+    if not os.path.exists(f):
+        print(f"ERROR: Tiedostoa {f} ei löydy hakemistosta. Lopetetaan.")
+        sys.exit(1)
+print(f"OK: Kaikki tarvittavat excel tiedostot löytyvät {money_file},{workers_file}")
 
 
-def print_data(df, name):
-    print(name.upper())
-    for year in ["2018", "2019"]:
-        print(df[["TIME", year]])
-        delimiter()
+# lue execlit pandas dataframeiksi
+money = pd.read_excel(money_file, sheet_name="Sheet 1",header=9) # rivit 0-9 pois , rivi 10 alkaen
+money = money.loc[:, ~money.columns.str.contains('Unnamed')] # # siivousta "unnamed" pois vuosien vierestä
 
+workers = pd.read_excel(workers_file, sheet_name="Sheet 1", header=9)
+workers = workers.loc[:, ~workers.columns.str.contains('Unnamed')] # siivousta "unnamed" pois vuosien vierestä
+
+
+
+####################################################################################
+def calc_productivity(money_df, workers_df, countries, years):
+    subset_money = money_df[money_df["TIME"].isin(countries)]
+    subset_workers = workers_df[workers_df["TIME"].isin(countries)]
+    
+    productivity = subset_money[["TIME"] + wanted_years].copy()
+    print ("----------------- PRODUCTIVITY ---------------------------")
+    for year in years:
+        productivity[year] = subset_money[year] / subset_workers[year]
+    
+    return productivity
+
+####################################################################################
 
 
 wanted_countries = ["Belgium", "Bulgaria", "Czechia", "Denmark", "Germany","Finland"]
-subset_money = money[money["TIME"].isin(wanted_countries)]
-subset_workers = workers[workers["TIME"].isin(wanted_countries)]
+wanted_years = ["2018", "2019","2020","2023"]
 
-print_data(subset_money, "MONEYS")
-print_data(subset_workers, "WORKERS")
+productivity = calc_productivity(money, workers, wanted_countries, wanted_years)
+print(productivity)
