@@ -2,10 +2,14 @@ import pandas as pd
 import os, sys
 import matplotlib.pyplot as plt
 
+# =================== EXCEL-TIEDOSTOT ===================
+# money.xlsx sisältää tuotantoa rahassa (chain-linked volumes, index 2020=100)
+# workers.xlsx sisältää työllisten määrät tuhansina henkilöinä
 money_file = "money.xlsx"
 workers_file = "workers.xlsx"
 
 # =================== TIEDOSTOJEN TARKISTUS ===================
+# Varmistetaan, että molemmat Excel-tiedostot löytyvät
 for f in [money_file, workers_file]:
     if not os.path.exists(f):
         print(f"ERROR: Tiedostoa {f} ei löydy hakemistosta. Lopetetaan.")
@@ -13,19 +17,29 @@ for f in [money_file, workers_file]:
 print(f"OK: Kaikki tarvittavat Excel-tiedostot löytyvät {money_file},{workers_file}")
 
 # =================== LUE EXCELIT ===================
-money = pd.read_excel(money_file, sheet_name="Sheet 1", header=9)  # rivi 0-9 pois
-money = money.loc[:, ~money.columns.str.contains('Unnamed')]       # poista "Unnamed" sarakkeet
+# Poistetaan ylimääräiset rivit (header=9) ja sarakkeet, jotka Excelissä ovat "Unnamed"
+money = pd.read_excel(money_file, sheet_name="Sheet 1", header=9)
+money = money.loc[:, ~money.columns.str.contains('Unnamed')]
 
 workers = pd.read_excel(workers_file, sheet_name="Sheet 1", header=9)
 workers = workers.loc[:, ~workers.columns.str.contains('Unnamed')]
 
 # =================== TUOTTAVUUSFUNKTIO ===================
 def calc_productivity(money_df, workers_df, countries, years):
-    # valitaan vain halutut maat
+    """
+    Laskee normalisoidun tuottavuuden halutuille maille ja vuosille.
+    Tuottavuus per työntekijä lasketaan kaavalla:
+        productivity = (normalisoitu raha / työlliset) * 1000
+    Normalisointi tehdään suhteessa maksimiarvoon kullakin vuonna, jotta
+    eri maiden absoluuttiset BKT-luvut eivät vääristä vertailua.
+    """
+
+    # Valitaan vain halutut maat
     subset_money = money_df[money_df["TIME"].isin(countries)]
     subset_workers = workers_df[workers_df["TIME"].isin(countries)]
 
-    # =================== DEBUG: tarkista Saksa ===================
+    # =================== DEBUG ===================
+    # Tarkistetaan, että Saksa löytyy oikein molemmista tiedostoista
     print("\n--- DEBUG: Germany in money.xlsx ---")
     print(subset_money[subset_money["TIME"]=="Germany"])
     print("\n--- DEBUG: Germany in workers.xlsx ---")
@@ -37,24 +51,27 @@ def calc_productivity(money_df, workers_df, countries, years):
     # =================== NORMALISOITU LASKENTA ===================
     for year in years:
         # Normalisointi: rahasarakkeen arvo / maksimi kyseisen vuoden rahasarakkeessa
-        # Tämä estää sen, että 2020 arvo 100000 kaikilla kaataa laskun
         norm_money = subset_money[year] / subset_money[year].max()
-        # Productivity = normalisoitu raha / työntekijät, kerrotaan 1000 näkyvyyden vuoksi
+        # Productivity = normalisoitu raha / työntekijät * 1000 (näkyvyyden vuoksi)
         productivity[year] = (norm_money / subset_workers[year]) * 1000
 
     return productivity
 
 # =================== PARAMETRIT ===================
-wanted_countries = ["Belgium", "Bulgaria", "Czechia", "Denmark", "Germany","Finland"]
-wanted_years = ["2018", "2019","2020","2023"]
+# Halutut maat ja vuodet analyysiin
+wanted_countries = ["Belgium", "Bulgaria", "Czechia", "Denmark", "Germany", "Finland"]
+wanted_years = ["2018", "2019", "2020", "2023"]
 
 # =================== LASKENTA ========================
 productivity = calc_productivity(money, workers, wanted_countries, wanted_years)
+
+# =================== TULOSTUS ========================
 print("\n----------------- PRODUCTIVITY (normalized) ---------------------------")
 print(productivity)
 
 # =================== PYLVÄSDIAGRAMMI ===================
-df = productivity.set_index("TIME")  # maat x-akselille
+# Visualisoidaan normalisoitu tuottavuus pylväsdiagrammina
+df = productivity.set_index("TIME")  # asetetaan maat x-akselille
 
 ax = df.plot(kind='bar', figsize=(10,6))
 ax.set_ylabel("Relative Productivity (normalized)")
@@ -62,3 +79,9 @@ ax.set_title("Normalized Productivity by Country (2018, 2019, 2020, 2023)")
 plt.xticks(rotation=45)
 plt.tight_layout()
 plt.show()
+
+# =================== HUOMAUTUKSET LOPPUTYÖHÖN ===================
+# - Normalisoitu tuottavuus kertoo suhteellisen tuottavuuden eri maiden välillä
+# - Korkea pylväs = suhteellinen tuottavuus korkeampi; matala pylväs = pienempi
+# - Absoluuttista rahallista tuottavuutta varten tarvitaan todellinen BKT euroina
+# - Debug-osio voidaan poistaa lopullisesta versiossa
