@@ -2,7 +2,7 @@
 
 import pandas as pd
 import os,sys
-
+import matplotlib.pyplot as plt
 
 money_file = "money.xlsx"
 workers_file = "workers.xlsx"
@@ -42,5 +42,17 @@ def calc_productivity(money_df, workers_df, countries, years):
 wanted_countries = ["Belgium", "Bulgaria", "Czechia", "Denmark", "Germany","Finland"]
 wanted_years = ["2018", "2019","2020","2023"]
 
+#========================= LASKENTA ========================
 productivity = calc_productivity(money, workers, wanted_countries, wanted_years)
 print(productivity)
+
+
+# =================== PYLVÄSDIAGRAMMI ===================
+df = productivity.set_index("TIME")  # maat x-akselille
+
+ax = df.plot(kind='bar', figsize=(10,6))
+ax.set_ylabel("Productivity")
+ax.set_title("Productivity by Country (2018, 2019, 2020, 2023)")
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.show()

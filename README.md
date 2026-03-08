@@ -29,6 +29,9 @@ wanted_years = ["2018", "2019","2020","2023"]
 ```
 
 
+![Productivity Chart](prod.png)
+
+
 *Execute command*
 
 ```
